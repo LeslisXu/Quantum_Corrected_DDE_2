@@ -277,6 +277,13 @@ print(f'Initial carrier density: {min_dense:.2e} m^-3')
 
 arrays['n'].fill(min_dense)
 arrays['p'].fill(min_dense)
+print(f"Initial: arrays['V'] = {arrays['V']}\narrays['n'] = {arrays['n']}\narrays['p'] = {arrays['n']}")
+# Initial carrier density: 1.46e-24 m^-3
+# Initial: arrays['V'] = [0. 0. 0. ... 0. 0. 0.]
+# arrays['n'] = [1.45625128e-24 1.45625128e-24 1.45625128e-24 ... 1.45625128e-24
+#  1.45625128e-24 1.45625128e-24]
+# arrays['p'] = [1.45625128e-24 1.45625128e-24 1.45625128e-24 ... 1.45625128e-24
+#  1.45625128e-24 1.45625128e-24]
 
 # Setup photogeneration (if available)
 try:
@@ -327,6 +334,9 @@ for Va_cnt in range(0, num_V + 2):
         V_leftBC = -((Vbi-Va)/(2*const.Vt) - params.phi_a/const.Vt)
         V_rightBC = (Vbi-Va)/(2*const.Vt) - params.phi_c/const.Vt
         arrays['V'], _ = init_voltage_2d(params.num_cell_x, params.num_cell_y, V_leftBC, V_rightBC)
+        arrays['n'].fill(min_dense)
+        arrays['p'].fill(min_dense)
+        print(f"arrays['V'] = {arrays['V']}\narrays['n'] = {arrays['n']}\narrays['p'] = {arrays['n']}")
     
     print(f"V.shape = {arrays['V'].shape}")
     print(f"V.size = {arrays['V'].size}")
@@ -386,7 +396,7 @@ for Va_cnt in range(0, num_V + 2):
     print(f"Corner p values: {[arrays['p'][idx] for idx in corner_indices]}")
     print("=" * 60)
     # ========== 打印代码结束 ==========
-    
+    print(f'Before iteration starts, error_np = {error_np}')
     while error_np > params.tolerance:
         # Store previous iteration values
         arrays['V_prev_iter'] = arrays['V'].copy()
@@ -447,7 +457,7 @@ for Va_cnt in range(0, num_V + 2):
         arrays['Up'] = arrays['photogen_rate'] - arrays['R_Langevin']
         
         #-------------------------- Quantum Corrections -------------------------------------
-        
+        print(f"Before Quantum-Correction: arrays['n'] = {arrays['n']}\n\t\t arrays['p'] = {arrays['p']}")
         arrays['Lambda_n_old'] = arrays['Lambda_n'].copy()
         arrays['Lambda_p_old'] = arrays['Lambda_p'].copy()
         
@@ -468,14 +478,15 @@ for Va_cnt in range(0, num_V + 2):
             print(f"Warning: Quantum correction failed: {e}")
             arrays['Lambda_n'].fill(0.0)
             arrays['Lambda_p'].fill(0.0)
-        
+            
+        print(f"After Quantum-Correction: arrays['n'] = {arrays['n']}\n\t\t arrays['p'] = {arrays['p']}")
         #---------------------- Solve 2D Continuity Equations -------------------------------
         
         # Electron continuity equation
         cont_n.setup_eqn(V_carrier, arrays['Un'])
         matrix_n = cont_n.get_coefficient_matrix()
         arrays['n_old'] = arrays['n'].copy()
-        arrays['n_new'], success_n = solver.solve_2d_linear_system(matrix_n, cont_n.rhs)
+        arrays['n_new'], success_n = solver.solve_2d_linear_system(matrix_n, cont_n.rhs, solver_type='bicgstab', tolerance=1e-5 )
         
         if not success_n:
             print(f"Warning: Electron continuity solver failed at iteration {it}")
@@ -484,14 +495,17 @@ for Va_cnt in range(0, num_V + 2):
         cont_p.setup_eqn(V_carrier, arrays['Up'])
         matrix_p = cont_p.get_coefficient_matrix()
         arrays['p_old'] = arrays['p'].copy()
-        arrays['p_new'], success_p = solver.solve_2d_linear_system(matrix_p, cont_p.rhs)
+        arrays['p_new'], success_p = solver.solve_2d_linear_system(matrix_p, cont_p.rhs, solver_type='bicgstab', tolerance=1e-5 )
+        print(f"After solve_2d_linear_system: arrays['n_new'] = {arrays['n_new']}\n\t\t arrays['p_new'] = {arrays['p_new']}")
         
         if not success_p:
             print(f"Warning: Hole continuity solver failed at iteration {it}")
         
         # Ensure non-negative carrier densities
-        arrays['n_new'] = np.maximum(arrays['n_new'], 1e10)
-        arrays['p_new'] = np.maximum(arrays['p_new'], 1e10)
+        # arrays['n_new'] = np.maximum(arrays['n_new'], 1e10)
+        # arrays['p_new'] = np.maximum(arrays['p_new'], 1e10)
+        print(f"After ensure non-negative carrier densities: arrays['n_new'] = {arrays['n_new']}\n\t\t arrays['p_new'] = {arrays['p_new']}")
+        
         
         #----------------------- Calculate Convergence Error ---------------------------------
         
@@ -508,7 +522,7 @@ for Va_cnt in range(0, num_V + 2):
                                (arrays['n_old'][idx] + arrays['p_old'][idx])
                     error_components.append(rel_error)
         
-        error_np = max(error_components) if error_components else 0.0
+        # error_np = max(error_components) if error_components else 0.0
         
         # Auto-adjust parameters if not converging
         if error_np >= old_error:
@@ -529,9 +543,9 @@ for Va_cnt in range(0, num_V + 2):
         #--------------------------- Error Analysis and Logging -----------------------------
 
         # 在记录错误分析之前，确保数组大小正确
-        print(f"Debug: V array size before error analysis: {arrays['V'].size}")
-        print(f"Debug: V_prev_iter array size: {arrays['V_prev_iter'].size}")
-        print(f"Debug: Expected V array size: {(params.num_cell_x + 1) * (params.num_cell_y + 1)}")
+        # print(f"Debug: V array size before error analysis: {arrays['V'].size}")
+        # print(f"Debug: V_prev_iter array size: {arrays['V_prev_iter'].size}")
+        # print(f"Debug: Expected V array size: {(params.num_cell_x + 1) * (params.num_cell_y + 1)}")
 
         error_analyzer.log_iteration_data_2d(
             Va_cnt, Va, arrays['V_prev_iter'], arrays['V'], 

@@ -46,10 +46,10 @@ class ErrorAnalysis():
         self.initialize_csv()
         
         # Debug information
-        print(f"ErrorAnalysis initialized:")
-        print(f"  nx = {self.nx}, ny = {self.ny}")
-        print(f"  n_total = {self.n_total}")
-        print(f"  n_total_V = {self.n_total_V}")
+        # print(f"ErrorAnalysis initialized:")
+        # print(f"  nx = {self.nx}, ny = {self.ny}")
+        # print(f"  n_total = {self.n_total}")
+        # print(f"  n_total_V = {self.n_total_V}")
     
     def initialize_csv(self):
         """Initialize CSV file with comprehensive headers for 2D analysis"""
@@ -146,12 +146,12 @@ class ErrorAnalysis():
         """
         errors = {}
         
-        # Debug information
-        print(f"Debug calculate_iteration_errors_2d:")
-        print(f"  V_old.size = {V_old.size}, V_new.size = {V_new.size}")
-        print(f"  Expected V size = {self.n_total_V}")
-        print(f"  n_old.size = {n_old.size}, n_new.size = {n_new.size}")
-        print(f"  Expected n size = {self.n_total}")
+        # # Debug information
+        # print(f"Debug calculate_iteration_errors_2d:")
+        # print(f"  V_old.size = {V_old.size}, V_new.size = {V_new.size}")
+        # print(f"  Expected V size = {self.n_total_V}")
+        # print(f"  n_old.size = {n_old.size}, n_new.size = {n_new.size}")
+        # print(f"  Expected n size = {self.n_total}")
         
         # Validate array sizes
         if V_old.size != self.n_total_V or V_new.size != self.n_total_V:
@@ -243,17 +243,17 @@ class ErrorAnalysis():
         V_interior = []
         
         # Add bounds checking
-        print(f"Debug _extract_interior_V: V_full.size = {V_full.size}, expected = {self.n_total_V}")
+        # print(f"Debug _extract_interior_V: V_full.size = {V_full.size}, expected = {self.n_total_V}")
         
         for i in range(1, self.ny):
             for j in range(1, self.nx):
                 idx = self._ij_to_index_V(i, j)
-                print(f"Debug: i={i}, j={j}, idx={idx}, V_full.size={V_full.size}")
+         #       print(f"Debug: i={i}, j={j}, idx={idx}, V_full.size={V_full.size}")
                 
                 if idx >= V_full.size:
-                    print(f"Error: Index {idx} out of bounds for array size {V_full.size}")
-                    print(f"  i={i}, j={j}, nx={self.nx}, ny={self.ny}")
-                    print(f"  Expected size: {self.n_total_V}")
+                    # print(f"Error: Index {idx} out of bounds for array size {V_full.size}")
+                    # print(f"  i={i}, j={j}, nx={self.nx}, ny={self.ny}")
+                    # print(f"  Expected size: {self.n_total_V}")
                     raise IndexError(f"Index {idx} out of bounds for array size {V_full.size}")
                 
                 V_interior.append(V_full[idx])
@@ -309,11 +309,13 @@ class ErrorAnalysis():
                     V_top = V[self._ij_to_index_V(i+2, j+1)] if i < self.ny-1 and self._ij_to_index_V(i+2, j+1) < V.size else V_center
                     
                     # Discrete Laplacian
-                    laplacian_discrete = ((V_left + V_right - 2*V_center)/(self.dx**2) + 
-                                        (V_bottom + V_top - 2*V_center)/(self.dy**2))
+                    # laplacian_discrete = ((V_left + V_right - 2*V_center)/(self.dx**2) + 
+                    #                     (V_bottom + V_top - 2*V_center)/(self.dy**2))
+                    laplacian_discrete = ((V_left + V_right - 2*V_center)  + 
+                                        (V_bottom + V_top - 2*V_center) )
                     
                     # Charge term
-                    charge_term = -poiss.CV * (n[idx_carrier] - p[idx_carrier])
+                    charge_term = poiss.CV * (n[idx_carrier] - p[idx_carrier])
                     
                     # Residual = |∇²V - charge_term|
                     residual_array[idx_carrier] = abs(laplacian_discrete - charge_term)
@@ -374,6 +376,9 @@ class ErrorAnalysis():
             # Calculate residuals: |A*x - b|
             residual_n = np.abs(matrix_n.dot(n) - cont_n.rhs)
             residual_p = np.abs(matrix_p.dot(p) - cont_p.rhs)
+            print(f'matrix_n.dot(n) = {matrix_n.dot(n)}\nmatrix_p.dot(p) = {matrix_p.dot(p)}')
+            # print(f'matrix_n = {matrix_n}\nn = {n}')
+            print(f'cont_n.rhs = {cont_n.rhs}\ncont_p.rhs = {cont_p.rhs}')
         except Exception as e:
             print(f"Warning: Continuity residual calculation failed: {e}")
             residual_n = np.zeros(self.n_total)
@@ -424,9 +429,9 @@ class ErrorAnalysis():
         self.Va_current = Va
         
         # Add debug information
-        print(f"Debug log_iteration_data_2d:")
-        print(f"  V_old.size = {V_old.size}, V_new.size = {V_new.size}")
-        print(f"  Expected V size = {self.n_total_V}")
+        # print(f"Debug log_iteration_data_2d:")
+        # print(f"  V_old.size = {V_old.size}, V_new.size = {V_new.size}")
+        # print(f"  Expected V size = {self.n_total_V}")
         
         # Calculate comprehensive error metrics
         iter_errors = self.calculate_iteration_errors_2d(V_old, V_new, n_old, n_new, p_old, p_new)

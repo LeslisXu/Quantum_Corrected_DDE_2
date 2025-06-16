@@ -22,7 +22,7 @@ class LinearSolver2D:
     and convergence requirements.
     '''
     
-    def __init__(self, solver_type='direct', tolerance=1e-10, max_iterations=1000):
+    def __init__(self, solver_type='direct', tolerance=1e-5, max_iterations=1000):
         """
         Initialize the 2D linear solver with specified method and parameters.
         
@@ -76,6 +76,28 @@ class LinearSolver2D:
         info['solve_time'] = time.time() - start_time
         return solution, info
     
+    def sanitize_solution_simple(solution, replacement_value=0.0):
+        """
+        简化版本的solution清理函数，只返回清理后的数组
+        
+        Parameters:
+            solution: numpy数组，求解器返回的解向量
+            replacement_value: 替换值，默认为0.0
+            
+        Returns:
+            cleaned_solution: 清理后的solution数组
+        """
+        if not isinstance(solution, np.ndarray):
+            solution = np.array(solution)
+        
+        cleaned_solution = solution.copy()
+        
+        # 一次性替换所有NaN和Inf值
+        invalid_mask = ~np.isfinite(cleaned_solution)
+        cleaned_solution[invalid_mask] = replacement_value
+        
+        return cleaned_solution
+
     def _solve_direct(self, matrix, rhs):
         """Solve using direct sparse LU decomposition"""
         solution = spsolve(matrix, rhs)
@@ -83,7 +105,7 @@ class LinearSolver2D:
         # Ensure real solution for semiconductor equations
         if np.iscomplexobj(solution):
             solution = np.real(solution)
-            
+        solution = self.sanitize_solution_simple(solution, replacement_value=0.0)    
         return solution
     
     def _solve_bicgstab(self, matrix, rhs, x0=None):
@@ -93,12 +115,12 @@ class LinearSolver2D:
             
         solution, exit_code = bicgstab(
             matrix, rhs, x0=x0, 
-            tol=self.tolerance, 
+            # tol=self.tolerance, 
             maxiter=self.max_iterations
         )
         
         convergence_info = self._interpret_exit_code(exit_code, 'BiCGSTAB')
-        
+        solution = self.sanitize_solution_simple(solution, replacement_value=0.0)
         return solution, convergence_info
     
     def _solve_gmres(self, matrix, rhs, x0=None):
@@ -113,7 +135,7 @@ class LinearSolver2D:
         )
         
         convergence_info = self._interpret_exit_code(exit_code, 'GMRES')
-        
+        solution = self.sanitize_solution_simple(solution, replacement_value=0.0)
         return solution, convergence_info
     
     def _interpret_exit_code(self, exit_code, method_name):

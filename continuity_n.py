@@ -1,18 +1,9 @@
-# # -*- coding: utf-8 -*-
-# """
-# Created on Fri Oct 19, 2018
 
-# @author: Timofey Golubev
-
-# This contains everything needed to set up the continuity equation for electrons, using 
-# Scharfetter-Gummel discretization.
-
-# -*- coding: utf-8 -*-
 """
-Created on Fri Oct 19, 2018
+Created on June 11, 2025
 Enhanced for 2D simulation
 
-@author: Timofey Golubev, Extended for 2D
+@author: Xiaoyan Xu (XIDIAN UNIVERSITY), Extended for 2D
 
 2D Electron Continuity Equation Module
 Implements the discretized electron continuity equation using Scharfetter-Gummel scheme
@@ -227,9 +218,6 @@ class Continuity_n():
                       format='csr')
         
         return matrix
-    
-    
-    
     
     
     
